@@ -1,53 +1,107 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+import shutil
+import os
+
 from database import get_db
+from models.device import Device
 from models.food import Food
 from models.log import Log
-from models.device import Device
-from schemas.predict_schema import PredictionRequest, PredictionResponse
 from services.calorie_service import calculate_calories
+from schemas.predict_schema import PredictionResponse
+from services.gemini_service import identify_food
 
 router = APIRouter()
 
+# Folder to temporarily store uploaded images
+UPLOAD_DIR = "temp_images"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 @router.post("/device/predict", response_model=PredictionResponse)
-def predict_food(request: PredictionRequest, db: Session = Depends(get_db)):
+async def predict(
+    device_id: str,
+    weight: float,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
 
-    # 🔹 Step 1: Check if device exists
-    device = db.query(Device).filter(Device.device_id == request.device_id).first()
+    # ---------------------------------------------------
+    # 1. CHECK DEVICE EXISTS
+    # ---------------------------------------------------
+    device = db.query(Device).filter(
+        Device.device_id == device_id
+    ).first()
 
     if not device:
-        raise HTTPException(status_code=404, detail="Device not registered")
+        raise HTTPException(
+            status_code=404,
+            detail="Device not registered"
+        )
 
-    # 🔹 Step 2: Temporary ML prediction (replace later with real ML)
-    predicted_food_name = "rice"
+    # ---------------------------------------------------
+    # 2. SAVE IMAGE TEMPORARILY
+    # ---------------------------------------------------
+    file_path = f"{UPLOAD_DIR}/{file.filename}"
 
-    # 🔹 Step 3: Fetch food from DB
-    food = db.query(Food).filter(Food.food_name == predicted_food_name).first()
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # ---------------------------------------------------
+    # 3. GEMINI FOOD IDENTIFICATION
+    # ---------------------------------------------------
+    predicted_food = identify_food(file_path)
+    print("Gemini Prediction:", predicted_food)
+
+    # ---------------------------------------------------
+    # 4. FIND FOOD IN DATABASE
+    # ---------------------------------------------------
+    food = (
+        db.query(Food)
+        .filter(Food.food_name.ilike(f"%{predicted_food}%"))
+        .first()
+    )
 
     if not food:
-        raise HTTPException(status_code=404, detail="Food not found in database")
+        os.remove(file_path)
+        raise HTTPException(
+            status_code=404,
+            detail=f"Food '{predicted_food}' not found in database"
+        )
 
-    # 🔹 Step 4: Calculate calories
-    calculated = calculate_calories(food.calories_per_100g, request.weight)
+    # ---------------------------------------------------
+    # 5. CALCULATE CALORIES
+    # ---------------------------------------------------
+    calories = calculate_calories(
+        food.calories_per_100g,
+        weight
+    )
 
-    # 🔹 Step 5: Store log entry
-    new_log = Log(
+    # ---------------------------------------------------
+    # 6. STORE LOG ENTRY
+    # ---------------------------------------------------
+    log = Log(
         user_id=device.user_id,
         device_id=device.device_id,
         food_id=food.id,
-        weight=request.weight,
-        calculated_calories=calculated,
+        weight=weight,
+        calculated_calories=calories,
         confidence=0.95
     )
 
-    db.add(new_log)
+    db.add(log)
     db.commit()
 
+    # ---------------------------------------------------
+    # 7. DELETE TEMP IMAGE
+    # ---------------------------------------------------
+    os.remove(file_path)
+
+    # ---------------------------------------------------
+    # 8. RETURN RESPONSE
+    # ---------------------------------------------------
     return {
         "food_name": food.food_name,
         "confidence": 0.95,
-        "calculated_calories": round(calculated, 2),
-        "timestamp": datetime.utcnow()
+        "calculated_calories": round(calories, 2)
     }
