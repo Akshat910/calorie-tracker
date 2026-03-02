@@ -10,6 +10,7 @@ from models.log import Log
 from services.calorie_service import calculate_calories
 from schemas.predict_schema import PredictionResponse
 from services.gemini_service import identify_food
+from services.food_generator import generate_food_nutrition
 
 router = APIRouter()
 
@@ -57,17 +58,14 @@ async def predict(
     # 4. FIND FOOD IN DATABASE
     # ---------------------------------------------------
     food = (
-        db.query(Food)
-        .filter(Food.food_name.ilike(f"%{predicted_food}%"))
-        .first()
+    db.query(Food)
+    .filter(Food.food_name.ilike(f"%{predicted_food}%"))
+    .first()
     )
-
+    # ✅ AUTO CREATE FOOD IF NOT FOUNd
     if not food:
-        os.remove(file_path)
-        raise HTTPException(
-            status_code=404,
-            detail=f"Food '{predicted_food}' not found in database"
-        )
+        print(f"{predicted_food} not found. Generating nutrition...")
+        food = generate_food_nutrition(predicted_food)
 
     # ---------------------------------------------------
     # 5. CALCULATE CALORIES
