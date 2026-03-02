@@ -14,4 +14,5 @@ ESP32 → FastAPI → ML Model → Database → Frontend
 
 ## Status
 Phase 0 Complete – Backend structure initialized.<br>
-Phase 1 Complete - Backend, database integration, analytics APIs, and ML module setup
+Phase 1 Complete - Backend, database integration, analytics APIs, and ML module setup <br>
+Phase 2 Complete - Gemini vision integration, auto nutrition generation, dynamic food database <br>
