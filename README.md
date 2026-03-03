@@ -41,13 +41,13 @@ Logs & Analytics APIs
 
 ## Features Implemented
 
-### Phase 0 – Project Setup ✅
+### Phase 0 – Project Setup 
 - Backend folder structure
 - Database configuration
 - GitHub integration
 - API documentation (Swagger)
 
-### Phase 1 – Backend Core System ✅
+### Phase 1 – Backend Core System 
 - User & Device management
 - Food database schema
 - Calorie calculation service
@@ -55,7 +55,7 @@ Logs & Analytics APIs
 - Daily calorie tracking
 - Weekly analytics API
 
-### Phase 2 – AI Integration (Gemini) ✅
+### Phase 2 – AI Integration (Gemini) 
 - Image upload endpoint
 - Gemini Vision-based food recognition
 - Dynamic nutrition generation
