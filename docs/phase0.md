@@ -1,7 +1,6 @@
 Microcontroller: ESP32
 Backend: FastAPI (Python)
 Database: PostgreSQL
-ML: TensorFlow (MobileNetV2 fine-tuned)
 Frontend: React (optional for MVP)
 Protocol: HTTP REST
 

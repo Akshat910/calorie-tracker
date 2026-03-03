@@ -24,6 +24,9 @@ Database table design:
 * id
 * food\_name
 * calories\_per\_100g
+* protein
+* carbs
+* fats
 
 
 
@@ -31,8 +34,9 @@ Database table design:
 
 * id
 * user\_id
+* device\_id
 * food\_id
 * weight
-* calories
+* calculated\_calories
 * confidence
 * timestamp
